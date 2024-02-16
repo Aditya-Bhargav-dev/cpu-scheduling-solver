@@ -54,26 +54,6 @@ function displayResult(jobs, startTime, endTime, turnAroundTime) {
 }
 
 
-function fcfsScheduleJobsSingleCPU(jobs) {
-    // Sort jobs based on arrival time
-    jobs.sort((a, b) => a.arrivalTime - b.arrivalTime);
-
-    // Calculate start time, end time, and turn around time
-    let currentTime = 0;
-    const startTime = [];
-    const endTime = [];
-    const turnAroundTime = [];
-
-    for (const job of jobs) {
-        startTime.push(currentTime);
-        endTime.push(currentTime + job.burstTime);
-        turnAroundTime.push(endTime[endTime.length - 1] - job.arrivalTime);
-        currentTime = endTime[endTime.length - 1];
-    }
-
-    return { startTime, endTime, turnAroundTime };
-}
-
 function fcfsScheduleJobs(jobs, numOfCPUs) {
   // Sort jobs based on arrival time
   jobs.sort((a, b) => a.arrivalTime - b.arrivalTime);
@@ -117,8 +97,16 @@ function fcfsScheduleJobs(jobs, numOfCPUs) {
   const turnAroundTime = CPUs.reduce((result, cpu) => result.concat(cpu.turnAroundTime), []);
 
   console.log(CPUs)
-  console.log(startTime, endTime, turnAroundTime)
-  return { startTime, endTime, turnAroundTime };
+  console.log(startTime, endTime, turnAroundTime);
+
+  
+  // Calculate total burst time
+  const totalBurstTime = CPUs.reduce(
+    (sum, cpu) => sum + cpu.endTime[cpu.endTime.length - 1],
+    0
+  );
+
+   return { startTime, endTime, turnAroundTime };
 }
 
 function scheduleJobs() {
@@ -140,6 +128,9 @@ function scheduleJobs() {
       console.log(startTime, endTime, turnAroundTime )
       // Display the result
       displayResult(jobs, startTime, endTime, turnAroundTime);
+
+      
+      displaychart(startTime, endTime)
   
       let avg = document.getElementById("avgtr");
       const avgTATime = turnAroundTime.reduce((a, b) => a + b) / turnAroundTime.length;
@@ -148,132 +139,9 @@ function scheduleJobs() {
     }
   }
 
-function sjfScheduleJobssinglecpu(processesInfo) {
-      processesInfo.sort((obj1, obj2) => {
-        if (obj1.arrivalTime > obj2.arrivalTime) return 1;
-        if (obj1.arrivalTime < obj2.arrivalTime) return -1;
-        if (obj1.burstTime > obj2.burstTime) return 1;
-        if (obj1.burstTime < obj2.burstTime) return -1;
-        return 0;
-      });
-  
-    let finishTime = [];
-    
-    const solvedProcessesInfo = [];
-    const readyQueue = [];
-    const finishedJobs = [];
-
-    const startTime = [];
-    const endTime = [];
-    const turnAroundTime = [];
-  
-    for (let i = 0; i < processesInfo.length; i++) {
-      if (i === 0) {
-        readyQueue.push(processesInfo[0]);
-        finishTime.push(processesInfo[0].arrivalTime + processesInfo[0].burstTime);
-        solvedProcessesInfo.push({
-          ...processesInfo[0],
-          ft: finishTime[0],
-          tat: finishTime[0] - processesInfo[0].arrivalTime,
-          wat: finishTime[0] - processesInfo[0].arrivalTime - processesInfo[0].burstTime,
-        });
-  
-        processesInfo.forEach((p) => {
-          if (p.arrivalTime <= finishTime[0] && !readyQueue.includes(p)) {
-            readyQueue.push(p);
-          }
-        });
-  
-        readyQueue.shift();
-        finishedJobs.push(processesInfo[0]);
-  
-      } else {
-        if (
-          readyQueue.length === 0 &&
-          finishedJobs.length !== processesInfo.length
-        ) {
-          const unfinishedJobs = processesInfo
-            .filter((p) => {
-              return !finishedJobs.includes(p);
-            })
-            .sort((a, b) => {
-              if (a.arrivalTime > b.arrivalTime) return 1;
-              if (a.arrivalTime < b.arrivalTime) return -1;
-              if (a.burstTime > b.burstTime) return 1;
-              if (a.burstTime < a.burstTime) return -1;
-              return 0;
-            });
-          readyQueue.push(unfinishedJobs[0]);
-        }
-  
-        const rqSortedByBT = [...readyQueue].sort((a, b) => {
-          if (a.burstTime > b.burstTime) return 1;
-          if (a.burstTime < b.burstTime) return -1;
-          if (a.arrivalTime > b.arrivalTime) return 1;
-          if (a.arrivalTime < b.arrivalTime) return -1;
-          return 0;
-        });
-  
-        const processToExecute = rqSortedByBT[0];
-  
-        const previousFinishTime = finishTime[finishTime.length - 1];
-  
-        if (processToExecute.arrivalTime > previousFinishTime) {
-          finishTime.push(processToExecute.arrivalTime + processToExecute.burstTime);
-          const newestFinishTime = finishTime[finishTime.length - 1];
-        } else {
-          finishTime.push(previousFinishTime + processToExecute.burstTime);
-          const newestFinishTime = finishTime[finishTime.length - 1];
-        }
-  
-        const newestFinishTime = finishTime[finishTime.length - 1];
-  
-        solvedProcessesInfo.push({
-          ...processToExecute,
-          ft: newestFinishTime,
-          tat: newestFinishTime - processToExecute.arrivalTime,
-          wat: newestFinishTime - processToExecute.arrivalTime - processToExecute.burstTime,
-        });
-  
-        processesInfo.forEach((p) => {
-          if (
-            p.arrivalTime <= newestFinishTime &&
-            !readyQueue.includes(p) &&
-            !finishedJobs.includes(p)
-          ) {
-            readyQueue.push(p);
-          }
-        });
-  
-        const indexToRemove = readyQueue.indexOf(processToExecute);
-        if (indexToRemove > -1) {
-          readyQueue.splice(indexToRemove, 1);
-        }
-  
-        finishedJobs.push(processToExecute);
-      }
-    }
-  
-    // Sort the processes by job name within arrival time
-    solvedProcessesInfo.sort((obj1, obj2) => {
-      if (obj1.arrivalTime > obj2.arrivalTime) return 1;
-      if (obj1.arrivalTime < obj2.arrivalTime) return -1;
-      if (obj1.job > obj2.job) return 1;
-      if (obj1.job < obj2.job) return -1;
-      return 0;
-    });
-    
-    solvedProcessesInfo.forEach(element => {
-        startTime.push(element.ft - element.burstTime);
-        endTime.push(element.ft);
-        turnAroundTime.push(element.tat);
-    });
-    
-    return { startTime, endTime, turnAroundTime };
-
-  }
   
   function sjfScheduleJobs(processesInfo, numOfCPUs) {
+    console.log(processesInfo)
     // Sort jobs based on arrival time and burst time
     processesInfo.sort((a, b) => a.arrivalTime - b.arrivalTime || a.burstTime - b.burstTime);
   
@@ -400,3 +268,39 @@ function sjfScheduleJobssinglecpu(processesInfo) {
   
     return { startTime, endTime, turnAroundTime };
   }
+
+  function displaychart(startTime, endTime)
+  {
+    let jobData = []
+    for (let i = 0; i < startTime.length; i++) {
+      jobData.push({label:"P"+i+1 , y:[startTime[i],endTime[i]]})
+    }
+   
+  var chart = new CanvasJS.Chart("chartContainer",
+                               {
+  title: {
+    text: "CPU Scheduling"
+  },
+  axisY: {
+    minimum: 0,            
+    interval: 10,
+    labelFormatter: function(e){
+      return e.value
+    },
+    gridThickness: 2
+  },
+
+  toolTip:{
+    contentFormatter: function ( e ) {
+      return "<strong>" + e.entries[0].dataPoint.label + "</strong></br> Start: " +  e.entries[0].dataPoint.y[0] + "</br>End : " +  e.entries[0].dataPoint.y[1];  
+    }},
+
+  data: [
+    {
+      type: "rangeBar",
+      dataPoints:jobData
+    }
+  ]                      
+});
+chart.render();
+}
