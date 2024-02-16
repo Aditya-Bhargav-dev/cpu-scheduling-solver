@@ -273,7 +273,7 @@ function scheduleJobs() {
   {
     let jobData = []
     for (let i = 0; i < startTime.length; i++) {
-      jobData.push({label:"P"+i+1 , y:[startTime[i],endTime[i]]})
+      jobData.push({label:"P"+  String(i+1), y:[startTime[i],endTime[i]]})
     }
    
   var chart = new CanvasJS.Chart("chartContainer",
