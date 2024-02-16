@@ -58,7 +58,6 @@ function fcfsScheduleJobs(jobs, numOfCPUs) {
   // Sort jobs based on arrival time
   jobs.sort((a, b) => a.arrivalTime - b.arrivalTime);
 
-  console.log(numOfCPUs);
   // Initialize CPUs array with empty objects
   const CPUs = Array.from({ length: numOfCPUs }, () => ({
     finishTime: [],
@@ -67,7 +66,6 @@ function fcfsScheduleJobs(jobs, numOfCPUs) {
     turnAroundTime: [],
   }));
 
-  console.log(CPUs);
   let currentTime = 0;
 
   for (let i = 0; i < jobs.length; i++) {
@@ -95,10 +93,6 @@ function fcfsScheduleJobs(jobs, numOfCPUs) {
   const startTime = CPUs.reduce((result, cpu) => result.concat(cpu.startTime), []);
   const endTime = CPUs.reduce((result, cpu) => result.concat(cpu.endTime), []);
   const turnAroundTime = CPUs.reduce((result, cpu) => result.concat(cpu.turnAroundTime), []);
-
-  console.log(CPUs)
-  console.log(startTime, endTime, turnAroundTime);
-
   
   // Calculate total burst time
   const totalBurstTime = CPUs.reduce(
@@ -125,7 +119,6 @@ function scheduleJobs() {
         ({ startTime, endTime, turnAroundTime } = sjfScheduleJobs(jobs, numOfCPUs));
       }
   
-      console.log(startTime, endTime, turnAroundTime )
       // Display the result
       displayResult(jobs, startTime, endTime, turnAroundTime);
 
@@ -141,7 +134,6 @@ function scheduleJobs() {
 
   
   function sjfScheduleJobs(processesInfo, numOfCPUs) {
-    console.log(processesInfo)
     // Sort jobs based on arrival time and burst time
     processesInfo.sort((a, b) => a.arrivalTime - b.arrivalTime || a.burstTime - b.burstTime);
   
