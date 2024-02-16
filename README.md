@@ -2,7 +2,8 @@
 
 <p>A web based tool to calculate Turnaround time based on scheduling algorithms.</p>
 
-cpu-scheduling-solver
+Verify your results here:
+https://cpu-scheduling-calc.netlify.app/
 
 <h4 align="center">Supported algorithms:</h4>
 <p>First Come First Serve / FCFS</p>
