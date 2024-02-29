@@ -24,7 +24,9 @@ function getUserInput() {
     return { jobs, jobType, numOfCPUs };
 }
 
-function displayResult(jobs, startTime, endTime, turnAroundTime) {
+function displayResult(jobsData) {
+
+  totalTurnaroundTime = 0
   // Display the result in the table
   const table = document.getElementById('jobTable');
   table.innerHTML = `
@@ -38,75 +40,24 @@ function displayResult(jobs, startTime, endTime, turnAroundTime) {
       </tr>
   `;
 
-  for (let i = 0; i < jobs.length; i++) {
-      const job = jobs[i];
-      const row = table.insertRow();
-      row.innerHTML = `
-          <td>${job.process}</td>
-          <td>${job.arrivalTime}</td>
-          <td>${job.burstTime}</td>
-          <td>${startTime[i]}</td>
-          <td>${endTime[i]}</td>
-          <td>${turnAroundTime[i]}</td>
-      `;
+  for (let i = 0; i < jobsData.length; i++) {
+      const job = jobsData[i];
+      for(let j=0;j<job.length;j++)
+      {
+        totalTurnaroundTime+=job[j].turnaroundTime;
+        const row = table.insertRow();
+        row.innerHTML = `
+            <td>${job[j].process}</td>
+            <td>${job[j].arrivalTime}</td>
+            <td>${job[j].burstTime}</td>
+            <td>${job[j].startTime}</td>
+            <td>${job[j].endTime}</td>
+            <td>${job[j].turnaroundTime}</td>
+        `;
+      }
   }
+  return totalTurnaroundTime;
 
-}
-
-
-function fcfsScheduleJobs(jobs, numOfCPUs) {
-  // Sort jobs based on arrival time
-  jobs.sort((a, b) => a.arrivalTime - b.arrivalTime);
-
-  console.log(numOfCPUs);
-  // Initialize CPUs array with empty objects
-  const CPUs = Array.from({ length: numOfCPUs }, () => ({
-    finishTime: [],
-    startTime: [],
-    endTime: [],
-    turnAroundTime: [],
-  }));
-
-  console.log(CPUs);
-  let currentTime = 0;
-
-  for (let i = 0; i < jobs.length; i++) {
-    const currentCPU = i % numOfCPUs;
-    const finishTime = CPUs[currentCPU].finishTime;
-
-    if (finishTime.length === 0 || jobs[i].arrivalTime > finishTime[finishTime.length - 1]) {
-      // If the job arrives after the previous job finishes, start immediately
-      CPUs[currentCPU].startTime.push(jobs[i].arrivalTime);
-    } else {
-      // If the job arrives before the previous job finishes, wait until the previous job finishes
-      CPUs[currentCPU].startTime.push(finishTime[finishTime.length - 1]);
-    }
-
-    // Calculate end time and turn around time
-    CPUs[currentCPU].endTime.push(CPUs[currentCPU].startTime[CPUs[currentCPU].startTime.length - 1] + jobs[i].burstTime);
-    CPUs[currentCPU].turnAroundTime.push(CPUs[currentCPU].endTime[CPUs[currentCPU].endTime.length - 1] - jobs[i].arrivalTime);
-
-    // Update currentTime for the next iteration
-    currentTime = CPUs[currentCPU].endTime[CPUs[currentCPU].endTime.length - 1];
-    finishTime.push(currentTime);
-  }
-
-  // Combine the results from all CPUs
-  const startTime = CPUs.reduce((result, cpu) => result.concat(cpu.startTime), []);
-  const endTime = CPUs.reduce((result, cpu) => result.concat(cpu.endTime), []);
-  const turnAroundTime = CPUs.reduce((result, cpu) => result.concat(cpu.turnAroundTime), []);
-
-  console.log(CPUs)
-  console.log(startTime, endTime, turnAroundTime);
-
-  
-  // Calculate total burst time
-  const totalBurstTime = CPUs.reduce(
-    (sum, cpu) => sum + cpu.endTime[cpu.endTime.length - 1],
-    0
-  );
-
-   return { startTime, endTime, turnAroundTime };
 }
 
 function scheduleJobs() {
@@ -114,34 +65,75 @@ function scheduleJobs() {
   
     if (userInput) {
       const { jobs, jobType, numOfCPUs } = userInput;
-  
-      let startTime, endTime, turnAroundTime;
-  
-      if (jobType === 'fcfs') {
-        // Implement First Come First Serve (FCFS) scheduling
-        ({ startTime, endTime, turnAroundTime } = fcfsScheduleJobs(jobs, numOfCPUs));
-      } else if (jobType === 'sjf') {
-        // Implement Shortest Job First (SJF) scheduling with multiple CPUs
-        ({ startTime, endTime, turnAroundTime } = sjfScheduleJobs(jobs, numOfCPUs));
-      }
-  
-      console.log(startTime, endTime, turnAroundTime )
+
+      ({ jobsData, jobQueue } = ScheduleJobs(jobType, jobs, numOfCPUs));
+      
       // Display the result
-      displayResult(jobs, startTime, endTime, turnAroundTime);
+      totalTurnaroundTime=displayResult(jobsData);
 
       
-      displaychart(startTime, endTime)
+      displaychart(jobsData)
   
       let avg = document.getElementById("avgtr");
-      const avgTATime = turnAroundTime.reduce((a, b) => a + b) / turnAroundTime.length;
+      const avgTATime = totalTurnaroundTime/jobs.length;
   
       avg.innerText = "Average Turn Around time is " + avgTATime;
     }
-  }
+}
 
+function fcfsScheduleJobs(jobs, numOfCPUs) {
+    // Sort jobs based on arrival time
+    jobs.sort((a, b) => a.arrivalTime - b.arrivalTime);
   
-  function sjfScheduleJobs(processesInfo, numOfCPUs) {
-    console.log(processesInfo)
+    // Initialize CPUs array with empty objects
+    const CPUs = Array.from({ length: numOfCPUs }, () => ({
+      finishTime: [],
+      startTime: [],
+      endTime: [],
+      turnAroundTime: [],
+      arrivalTime:[],
+      burstTime:[]
+    }));
+  
+   
+    let currentTime = 0;
+  
+    for (let i = 0; i < jobs.length; i++) {
+      const currentCPU = i % numOfCPUs;
+      const finishTime = CPUs[currentCPU].finishTime;
+  
+      if (finishTime.length === 0 || jobs[i].arrivalTime > finishTime[finishTime.length - 1]) {
+        // If the job arrives after the previous job finishes, start immediately
+        CPUs[currentCPU].startTime.push(jobs[i].arrivalTime);
+      } else {
+        // If the job arrives before the previous job finishes, wait until the previous job finishes
+        CPUs[currentCPU].startTime.push(finishTime[finishTime.length - 1]);
+      }
+  
+      // Calculate end time and turn around time
+      CPUs[currentCPU].endTime.push(CPUs[currentCPU].startTime[CPUs[currentCPU].startTime.length - 1] + jobs[i].burstTime);
+      CPUs[currentCPU].turnAroundTime.push(CPUs[currentCPU].endTime[CPUs[currentCPU].endTime.length - 1] - jobs[i].arrivalTime);
+  
+      // Update currentTime for the next iteration
+      currentTime = CPUs[currentCPU].endTime[CPUs[currentCPU].endTime.length - 1];
+      finishTime.push(currentTime);
+    }
+  
+    // Combine the results from all CPUs
+    const startTime = CPUs.reduce((result, cpu) => result.concat(cpu.startTime), []);
+    const endTime = CPUs.reduce((result, cpu) => result.concat(cpu.endTime), []);
+    const turnAroundTime = CPUs.reduce((result, cpu) => result.concat(cpu.turnAroundTime), []);
+    
+    // Calculate total burst time
+    const totalBurstTime = CPUs.reduce(
+      (sum, cpu) => sum + cpu.endTime[cpu.endTime.length - 1],
+      0
+    );
+  
+     return { startTime, endTime, turnAroundTime };
+}
+  
+function sjfScheduleJobs(processesInfo, numOfCPUs) {
     // Sort jobs based on arrival time and burst time
     processesInfo.sort((a, b) => a.arrivalTime - b.arrivalTime || a.burstTime - b.burstTime);
   
@@ -267,14 +259,100 @@ function scheduleJobs() {
     });
   
     return { startTime, endTime, turnAroundTime };
+}
+
+
+function ScheduleJobs(jobType, processesInfo, numOfCPUs) {
+ 
+  let count=processesInfo.length;
+ 
+  let cpus = new Array(parseInt(numOfCPUs)).fill(0);
+
+  let jobsData = []
+  for(let i=0; i < numOfCPUs; i++) {
+    jobsData.push([]);
   }
 
-  function displaychart(startTime, endTime)
+  let jobs = [];
+
+  for (let i = 0; i < processesInfo.length; i++) {
+    jobs.push({ process:processesInfo[i].process, arrivalTime: processesInfo[i].arrivalTime, burstTime: processesInfo[i].burstTime, "startTime": 0, "endTime": 0, "index": i+1, "jobFinished": false});
+  }
+
+  let jobQueue = [];
+  let jobQueueAddedTime = new Set();
+
+  let temp = 0;
+  while(temp != count) {
+        let cpuMinIndex = cpus.indexOf(Math.min(...cpus));
+
+        let tempJob = [];
+        for( let i = 0; i <  jobs.length; i++ ) {
+            if(!jobs[i].jobFinished && jobs[i].arrivalTime <= cpus[cpuMinIndex]) {
+                tempJob.push({ process:jobs[i].process, arrivalTime: jobs[i].arrivalTime, burstTime: jobs[i].burstTime, startTime: jobs[i].startTime, endTime: jobs[i].endTime, index:jobs[i].index+1, jobFinished: jobs[i].jobFinished });
+            }
+        }
+
+        if(tempJob.length > 0 )
+        {
+    
+          if(jobType=="FCFC")
+          {
+            // Sort jobs by arrival time
+            tempJob.sort((a, b) => a.arrivalTime - b.arrivalTime);
+          }
+          else if(jobType=="SJF")
+          {
+            // Sort jobs by burst time
+            tempJob.sort((a, b) => a.burstTime - b.burstTime);
+          }
+          
+          let currJob = tempJob[0];
+            
+          const cpuIndex = cpus.indexOf(Math.min(...cpus));            
+          const startTime = Math.max(cpus[cpuIndex], currJob.arrivalTime);            
+          const endTime = startTime + currJob.burstTime;          
+          const turnaroundTime = endTime - currJob.arrivalTime;        
+          jobs[currJob.index-2].jobFinished = true;
+          cpus[cpuIndex] = endTime;          
+
+          if(!(jobQueueAddedTime.has(startTime))) {
+            let tempjobQueue = {};
+            tempjobQueue[startTime] = [];
+
+            for(let i=0; i< tempJob.length; i++) {
+              tempjobQueue[startTime].push(tempJob[i].index-1);
+            }
+            jobQueue.push(tempjobQueue);
+          }
+          jobQueueAddedTime.add(startTime);
+
+
+            jobsData[cpuIndex].push({ process: currJob.index-1, arrivalTime:currJob.arrivalTime, burstTime:currJob.burstTime, startTime: startTime, endTime: endTime, turnaroundTime: turnaroundTime })
+            temp++;
+        }
+        else {
+            const cpuIndex = cpus.indexOf(Math.min(...cpus));
+            cpus[cpuIndex]++;
+        }
+  }
+
+  return {jobsData,jobQueue};
+
+}
+
+
+function displaychart(jobsData)
   {
     let jobData = []
-    for (let i = 0; i < startTime.length; i++) {
-      jobData.push({label:"P"+i+1 , y:[startTime[i],endTime[i]]})
+    
+  for (let i = 0; i < jobsData.length; i++) {
+    const job = jobsData[i];
+    for(let j=0;j<job.length;j++)
+    {
+      jobData.push({label:"CPU"+ String(i+1) , y:[job[j].startTime,job[j].endTime], process:"Process"+job[j].process})
     }
+  }
    
   var chart = new CanvasJS.Chart("chartContainer",
                                {
@@ -292,7 +370,7 @@ function scheduleJobs() {
 
   toolTip:{
     contentFormatter: function ( e ) {
-      return "<strong>" + e.entries[0].dataPoint.label + "</strong></br> Start: " +  e.entries[0].dataPoint.y[0] + "</br>End : " +  e.entries[0].dataPoint.y[1];  
+      return "<strong>" + e.entries[0].dataPoint.process + "</strong></br> Start: " +  e.entries[0].dataPoint.y[0] + "</br>End : " +  e.entries[0].dataPoint.y[1];  
     }},
 
   data: [
@@ -304,3 +382,6 @@ function scheduleJobs() {
 });
 chart.render();
 }
+
+
+  
