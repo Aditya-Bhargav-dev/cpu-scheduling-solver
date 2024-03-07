@@ -70,7 +70,6 @@ function scheduleJobs() {
       
       // Display the result
       totalTurnaroundTime=displayResult(jobsData);
-
       
       displaychart(jobsData)
   
@@ -78,7 +77,37 @@ function scheduleJobs() {
       const avgTATime = totalTurnaroundTime/jobs.length;
   
       avg.innerText = "Average Turn Around time is " + avgTATime;
+
+      jobQueues(jobQueue);
+
     }
+}
+
+function jobQueues(jobQueue)
+{
+  
+  const table = document.getElementById('queueTable');
+  table.innerHTML = `
+      <tr>
+          <th>Time</th>
+          <th>Jobs</th>
+      </tr>
+  `;
+
+  for (let i = 0; i < jobQueue.length; i++) {
+    const job = jobQueue[i];
+    for(let obj in job)
+    {
+      const row = table.insertRow();
+      row.innerHTML = `
+          <td>${obj.split(' ')}</td>
+          <td>${job[obj]}</td>
+      `;
+    }
+}
+
+
+
 }
 
 function fcfsScheduleJobs(jobs, numOfCPUs) {
